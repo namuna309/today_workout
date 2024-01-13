@@ -10,12 +10,8 @@
     "test": "jest"
   },
   "dependencies": {
-    "@react-native-picker/picker": "^2.6.1",
-    "@react-navigation/native": "^6.1.9",
-    "expo": "^49.0.21",
     "react": "18.2.0",
-    "react-native": "0.73.2",
-    "react-native-calendars": "^1.1303.0"
+    "react-native": "0.73.2"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
