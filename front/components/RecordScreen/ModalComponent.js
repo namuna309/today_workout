@@ -8,15 +8,29 @@ import { Dropdown } from 'react-native-element-dropdown';
 
 const ModalComponent = ({ selectedDate, modalVisible, onRequestClose }) => {
 
-  const [selectedOption, setSelectedOption] = useState("kg");
+  
   const [visible, setVisible] = useState(false);
   const [inputExercise, setInputExercise] = useState('');
   const [inputSetCount, setSetCount] = useState('');
   const [inputWeight, setInputWeight] = useState('');
+  const [selectedOption, setSelectedOption] = useState("kg");
   const [inputReps, setinputReps] = useState('');
+  const [inputDetails, setInputDetails] = useState([{ setCount: '', weight: '', option: 'kg', reps: '' }]);
 
+  const addInputDetail = () => {
+    setInputDetails([...inputDetails, { setCount: '', weight: '', option: 'kg', reps: '' }]);
+  };
 
-  // const toggleModal = () => setVisible(!visible);
+  const handleInputChange = (text, index, field) => {
+    const updatedDetails = inputDetails.map((inputdetail, idx) => {
+      if (idx === index) {
+        return { ...inputdetail, [field]: text };
+      }
+      return inputdetail;
+    });
+    setInputDetails(updatedDetails);
+  };
+  console.log(inputDetails)
 
   return (
     <Modal
@@ -39,8 +53,52 @@ const ModalComponent = ({ selectedDate, modalVisible, onRequestClose }) => {
               placeholder="운동 종목을 입력하세요"
             />
           </View>
-
-          <View style={styles.inputDetailBox}>
+         {
+          inputDetails.map((inputDetail, index) => {
+            return(
+              <View key={index} style={styles.inputDetailBox}>
+              <View style={styles.inputSetCountBox}>
+              <Input
+                onChangeText={(text) => handleInputChange(text, index, 'setCount')}
+                value={inputDetail.setCount}
+                placeholder="세트 수"
+              />
+            </View>
+            <View style={styles.inputWeightBox}>
+              <Input
+                onChangeText={(text) => handleInputChange(text, index, 'weight')}
+                value={inputDetail.weight}
+                placeholder="무게"
+                containerStyle={{width: "65%"}}
+                inputStyle={{width: "65%"}}
+              />
+              <Dropdown
+              style={styles.weightOptions}
+                data= {[
+                  { label: 'kg', value: 'kg' },
+                  { label: 'g', value: 'g' },
+                  { label: 'lbs', value: 'lbs' },
+                ]}
+                onChange={(opt) => handleInputChange(opt.label, index, 'option')}
+                  value={inputDetail.option}
+                  labelField="label"
+                valueField="value"
+                placeholder='단위'
+              />
+            </View>
+            <View style={styles.inputRepsBox}>
+              <Input
+                onChangeText={(text) => handleInputChange(text, index, 'reps')}
+                value={inputDetail.reps}
+                placeholder="반복 횟수"
+              />
+            </View>
+            </View> 
+            )
+           
+          })
+         }
+          {/* <View style={styles.inputDetailBox}>
             <View style={styles.inputSetCountBox}>
               <Input
                 onChangeText={setSetCount}
@@ -66,7 +124,7 @@ const ModalComponent = ({ selectedDate, modalVisible, onRequestClose }) => {
                 onChangeText={setSelectedOption}
                   value={selectedOption}
                   labelField="label"
-          valueField="value"
+                valueField="value"
                 placeholder='단위'
               />
             </View>
@@ -78,8 +136,10 @@ const ModalComponent = ({ selectedDate, modalVisible, onRequestClose }) => {
               />
             </View>
 
-          </View>
-
+          </View> */}
+          <TouchableOpacity onPress={addInputDetail}>
+        <Text style={styles.addIcon}>+</Text>
+      </TouchableOpacity>
           <TouchableOpacity
             style={styles.button}
             onPress={onRequestClose}
