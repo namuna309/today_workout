@@ -10,10 +10,6 @@ import { SwipeListView } from 'react-native-swipe-list-view';
 const ModalComponent = ({ selectedDate, modalVisible, onRequestClose }) => {
   const [visible, setVisible] = useState(false);
   const [inputExercise, setInputExercise] = useState('');
-  const [inputSetCount, setSetCount] = useState('');
-  const [inputWeight, setInputWeight] = useState('');
-  const [selectedOption, setSelectedOption] = useState("kg");
-  const [inputReps, setinputReps] = useState('');
   const [inputDetails, setInputDetails] = useState([{ setCount: '', weight: '', option: 'kg', reps: '', date: selectedDate }]);
 
   const addInputDetail = () => {
@@ -21,6 +17,7 @@ const ModalComponent = ({ selectedDate, modalVisible, onRequestClose }) => {
   };
 
   const handleInputChange = (text, index, field) => {
+    console.log(index);
     const updatedDetails = inputDetails.map((inputdetail, idx) => {
       if (idx === index) {
         return { ...inputdetail, [field]: text };
@@ -31,7 +28,6 @@ const ModalComponent = ({ selectedDate, modalVisible, onRequestClose }) => {
   };
 
   const removeInputDetail = (index) => {
-    console.log(index);
     const updatedDetails = inputDetails.filter((_, idx) => idx !== index);
     setInputDetails(updatedDetails);
   };
@@ -62,20 +58,19 @@ const ModalComponent = ({ selectedDate, modalVisible, onRequestClose }) => {
 
           <SwipeListView
             data={inputDetails}
-            renderItem={(inputDetail, index) => (
-
+            renderItem={({item, index}) => (
               <View key={index} style={styles.inputDetailBox}>
                 <View style={styles.inputSetCountBox}>
                   <Input
                     onChangeText={(text) => handleInputChange(text, index, 'setCount')}
-                    value={inputDetail.setCount}
+                    value={item.setCount}
                     placeholder="세트 수"
                   />
                 </View>
                 <View style={styles.inputWeightBox}>
                   <Input
                     onChangeText={(text) => handleInputChange(text, index, 'weight')}
-                    value={inputDetail.weight}
+                    value={item.weight}
                     placeholder="무게"
                     containerStyle={{ width: "65%" }}
                     inputStyle={{ width: "65%" }}
@@ -88,7 +83,7 @@ const ModalComponent = ({ selectedDate, modalVisible, onRequestClose }) => {
                       { label: 'lbs', value: 'lbs' },
                     ]}
                     onChange={(opt) => handleInputChange(opt.label, index, 'option')}
-                    value={inputDetail.option}
+                    value={item.option}
                     labelField="label"
                     valueField="value"
                     placeholder='단위'
@@ -97,7 +92,7 @@ const ModalComponent = ({ selectedDate, modalVisible, onRequestClose }) => {
                 <View style={styles.inputRepsBox}>
                   <Input
                     onChangeText={(text) => handleInputChange(text, index, 'reps')}
-                    value={inputDetail.reps}
+                    value={item.reps}
                     placeholder="반복 횟수"
                   />
                 </View>
@@ -105,7 +100,7 @@ const ModalComponent = ({ selectedDate, modalVisible, onRequestClose }) => {
 
 
             )}
-            renderHiddenItem={({ inputDetail, index }) => (
+            renderHiddenItem={({ item, index }) => (
               <TouchableOpacity
                 style={styles.deleteButtonBox}
                 onPress={() => removeInputDetail(index)}
