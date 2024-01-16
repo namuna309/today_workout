@@ -4,11 +4,17 @@ import { View, StyleSheet, ScrollView, Modal, Text } from 'react-native';
 import CalendarComponent from '../components/RecordScreen/CalendarComponent';
 import IconButtonComponent from '../components/RecordScreen/IconButtonComponent';
 import ModalComponent from '../components/RecordScreen/ModalComponent';
+
 const RecordScreen = ({}) => {
     const [modalVisible, setModalVisible] = useState(false);
-    const [selectedDate, setSelectedDate] = useState('');
+
+    // 현재 날짜를 YYYY-MM-DD 형식으로 얻기
+    const currentDate = new Date().toISOString().split('T')[0];
+    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     
     const onDaySelect = (day) => {
+      console.log(day);
+      console.log(day.dateString);
       setSelectedDate(day.dateString);
     };
   
