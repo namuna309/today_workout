@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
 import { Modal, View, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
-import { Divider, Text } from '@rneui/themed';
+import { Divider, Text, Icon } from '@rneui/themed';
 import { Input } from '@rneui/base';
 import { Picker } from '@react-native-picker/picker';
 import { Dropdown } from 'react-native-element-dropdown';
+import { SwipeListView } from 'react-native-swipe-list-view';
 
 
 const ModalComponent = ({ selectedDate, modalVisible, onRequestClose }) => {
-
-  
   const [visible, setVisible] = useState(false);
   const [inputExercise, setInputExercise] = useState('');
   const [inputSetCount, setSetCount] = useState('');
@@ -30,6 +29,13 @@ const ModalComponent = ({ selectedDate, modalVisible, onRequestClose }) => {
     });
     setInputDetails(updatedDetails);
   };
+
+  const removeInputDetail = (index) => {
+    console.log(index);
+    const updatedDetails = inputDetails.filter((_, idx) => idx !== index);
+    setInputDetails(updatedDetails);
+  };
+
   console.log(inputDetails)
 
   return (
@@ -53,93 +59,81 @@ const ModalComponent = ({ selectedDate, modalVisible, onRequestClose }) => {
               placeholder="운동 종목을 입력하세요"
             />
           </View>
-         {
-          inputDetails.map((inputDetail, index) => {
-            return(
-              <View key={index} style={styles.inputDetailBox}>
-              <View style={styles.inputSetCountBox}>
-              <Input
-                onChangeText={(text) => handleInputChange(text, index, 'setCount')}
-                value={inputDetail.setCount}
-                placeholder="세트 수"
-              />
-            </View>
-            <View style={styles.inputWeightBox}>
-              <Input
-                onChangeText={(text) => handleInputChange(text, index, 'weight')}
-                value={inputDetail.weight}
-                placeholder="무게"
-                containerStyle={{width: "65%"}}
-                inputStyle={{width: "65%"}}
-              />
-              <Dropdown
-              style={styles.weightOptions}
-                data= {[
-                  { label: 'kg', value: 'kg' },
-                  { label: 'g', value: 'g' },
-                  { label: 'lbs', value: 'lbs' },
-                ]}
-                onChange={(opt) => handleInputChange(opt.label, index, 'option')}
-                  value={inputDetail.option}
-                  labelField="label"
-                valueField="value"
-                placeholder='단위'
-              />
-            </View>
-            <View style={styles.inputRepsBox}>
-              <Input
-                onChangeText={(text) => handleInputChange(text, index, 'reps')}
-                value={inputDetail.reps}
-                placeholder="반복 횟수"
-              />
-            </View>
-            </View> 
-            )
-           
-          })
-         }
-          {/* <View style={styles.inputDetailBox}>
-            <View style={styles.inputSetCountBox}>
-              <Input
-                onChangeText={setSetCount}
-                value={inputSetCount}
-                placeholder="세트 수"
-              />
-            </View>
-            <View style={styles.inputWeightBox}>
-              <Input
-                onChangeText={setInputWeight}
-                value={inputWeight}
-                placeholder="무게"
-                containerStyle={{width: "65%"}}
-                inputStyle={{width: "65%"}}
-              />
-              <Dropdown
-              style={styles.weightOptions}
-                data= {[
-                  { label: 'kg', value: 'kg' },
-                  { label: 'g', value: 'g' },
-                  { label: 'lbs', value: 'lbs' },
-                ]}
-                onChangeText={setSelectedOption}
-                  value={selectedOption}
-                  labelField="label"
-                valueField="value"
-                placeholder='단위'
-              />
-            </View>
-            <View style={styles.inputRepsBox}>
-              <Input
-                onChangeText={setinputReps}
-                value={inputReps}
-                placeholder="반복 횟수"
-              />
-            </View>
-
-          </View> */}
+          
+            <SwipeListView
+              data={inputDetails}
+              renderItem={(inputDetail, index) => (
+                
+                    <View key={index} style={styles.inputDetailBox}>
+                      <View style={styles.inputSetCountBox}>
+                        <Input
+                          onChangeText={(text) => handleInputChange(text, index, 'setCount')}
+                          value={inputDetail.setCount}
+                          placeholder="세트 수"
+                        />
+                      </View>
+                      <View style={styles.inputWeightBox}>
+                        <Input
+                          onChangeText={(text) => handleInputChange(text, index, 'weight')}
+                          value={inputDetail.weight}
+                          placeholder="무게"
+                          containerStyle={{ width: "65%" }}
+                          inputStyle={{ width: "65%" }}
+                        />
+                        <Dropdown
+                          style={styles.weightOptions}
+                          data={[
+                            { label: 'kg', value: 'kg' },
+                            { label: 'g', value: 'g' },
+                            { label: 'lbs', value: 'lbs' },
+                          ]}
+                          onChange={(opt) => handleInputChange(opt.label, index, 'option')}
+                          value={inputDetail.option}
+                          labelField="label"
+                          valueField="value"
+                          placeholder='단위'
+                        />
+                      </View>
+                      <View style={styles.inputRepsBox}>
+                        <Input
+                          onChangeText={(text) => handleInputChange(text, index, 'reps')}
+                          value={inputDetail.reps}
+                          placeholder="반복 횟수"
+                        />
+                      </View>
+                    </View>
+                  
+                
+              )}
+              renderHiddenItem={({inputDetail, index}) => (
+                <TouchableOpacity
+                  style={styles.deleteButtonBox}
+                  onPress={() => removeInputDetail(index)}
+                >
+                  <View style={styles.deleteButton}>
+                  <Icon
+              name='trash-sharp'
+              type='ionicon'
+              color='#ff3232'
+              size={30}
+            />
+                  </View>
+                </TouchableOpacity>
+              )}
+              rightOpenValue={-80}
+              stopLeftSwipe={100}
+            />
+          
           <TouchableOpacity onPress={addInputDetail}>
-        <Text style={styles.addIcon}>+</Text>
-      </TouchableOpacity>
+            <View style={styles.modalPlusIcon}>
+              <Icon
+                name='pluscircle'
+                type='antdesign'
+                color='#517fa4'
+                size={30}
+              />
+            </View>
+          </TouchableOpacity>
           <TouchableOpacity
             style={styles.button}
             onPress={onRequestClose}
@@ -177,11 +171,12 @@ const styles = StyleSheet.create({
   },
   inputDetailBox: {
     width: '100%',
-    height: 'auto',
+    height: 70,
     display: 'flex',
     flexDirection: 'row',
     alignItems: 'center',
-    alignContent: 'center'
+    alignContent: 'center',
+    backgroundColor: 'white'
   },
   weightOptions: {
     width: '35%',
@@ -209,6 +204,28 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     textAlign: "center"
   },
+  modalPlusIcon: {
+    width: 'auto',
+    height: 'auto',
+    marginBottom: 20,
+  }, 
+  deleteButtonBox: {
+    width: '100%',
+    height: 70,
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignContent: 'center',
+    justifyContent: 'flex-end'
+  },
+  deleteButton: {
+    width:80,
+    height: '100%',
+    backgroundColor: '#4c0000',
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignContent: 'center',
+    justifyContent: 'center'
+  }
 });
 
 export default ModalComponent;
