@@ -7,6 +7,7 @@ import ModalComponent from '../components/RecordScreen/ModalComponent';
 
 const RecordScreen = ({ }) => {
   const [modalVisible, setModalVisible] = useState(false);
+  const [recordData, setRecordData] = useState({exercise: '', details:[{ setCount: '', weight: '', option: 'kg', reps: '' }], note: ''})
 
   // 현재 날짜를 YYYY-MM-DD 형식으로 얻기
   const currentDate = new Date().toISOString().split('T')[0];
@@ -21,8 +22,20 @@ const RecordScreen = ({ }) => {
     setSelectedDate(day.dateString);
   };
 
-  const toggleModal = () => {
+  const toggleModal = (record) => {
+    console.log(record);
+    setRecordData(record);
     setModalVisible(!modalVisible);
+  };
+
+  const fetchData = async () => {
+    const data = await fetchWorkoutData(selectedDate);
+    setWorkoutData(data);
+  };
+
+  // ModalComponent에서 사용할 저장 완료 콜백
+  const onSaveComplete = () => {
+    fetchData();
   };
 
   const fetchWorkoutData = async (selectedDate) => {
@@ -57,6 +70,7 @@ const RecordScreen = ({ }) => {
       <ScrollView style={styles.recordContainer}>
         
         {workoutData.map((record, index) => (
+          <TouchableOpacity onPress={() => toggleModal(workoutData[index])}>
           <View style={styles.viewRecordContainer}>
             <View style={styles.viewRecordBox}>
               <View style={styles.recordTitle}>
@@ -64,42 +78,44 @@ const RecordScreen = ({ }) => {
                   <Text style={styles.recordTitleTxt}>{record.exercise}</Text>
                   </View>
               </View>
-            <View style={styles.devideLine}></View>
-            <View style={styles.recordContent}>
-              {
-                record.details.map((detail, idx) => {
-                  return (
-                  <View style={styles.recordDetail}>
-                      <Text style={styles.recordDetailTxt}>{detail.weight}{detail.option}</Text>
-                      <Text style={styles.recordDetailTxt}>{detail.reps}회</Text>
-                      <Text style={styles.recordDetailTxt}>{detail.setCount}SET</Text>
-                  </View>
-                  )
-                })
-                
-              }
-            </View>
+              <View style={styles.devideLine}></View>
+              <View style={styles.recordContent}>
+                {
+                  record.details.map((detail, idx) => {
+                    return (
+                    <View style={styles.recordDetail}>
+                        <Text style={styles.recordDetailTxt}>{detail.weight}{detail.option}</Text>
+                        <Text style={styles.recordDetailTxt}>{detail.reps}회</Text>
+                        <Text style={styles.recordDetailTxt}>{detail.setCount}SET</Text>
+                    </View>
+                    )
+                  })
+                  
+                }
+              </View>
+              <View style={styles.devideLine}></View>
+              <View style={styles.noteContainer}>
+              <View 
+                style={isButtonDisabled(record) ? styles.disabledBtn : {}}
+              >
+                <IconButtonComponent 
+                  iconName='pencil-square-o'
+                  iconType='font-awesome'
+                  color='#464646'
+                  size='25'
+                />
+                </View>
+              </View>
             </View>
             
-            <View style={styles.noteContainer}>
-            <TouchableOpacity
-              disabled={isButtonDisabled(record)}
-              style={isButtonDisabled(record) ? styles.disabledBtn : {}}
-            >
-              <IconButtonComponent 
-                iconName='pencil-square-o'
-                iconType='font-awesome'
-                color='#464646'
-                size='25'
-              />
-              </TouchableOpacity>
-            </View>
+            
             
           </View>
+          </TouchableOpacity>
         ))}
         
         <View style={styles.addRecordBtnContainer}>
-          <TouchableOpacity onPress={toggleModal}>
+          <TouchableOpacity onPress={() => toggleModal({exercise: '', details:[{ setCount: '', weight: '', option: 'kg', reps: '' }], note: ''})}>
             <View style={styles.addRecordBtn}>
               <IconButtonComponent
                 iconName='plus-circle'
@@ -116,7 +132,7 @@ const RecordScreen = ({ }) => {
           </TouchableOpacity>
         </View>
       </ScrollView>
-      <ModalComponent selectedDate={selectedDate} modalVisible={modalVisible} onRequestClose={toggleModal} />
+      <ModalComponent recordData={recordData} selectedDate={selectedDate} modalVisible={modalVisible} onRequestClose={toggleModal} onSaveComplete={onSaveComplete} />
     </View>
   );
 };
@@ -142,7 +158,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 35,
   },
   viewRecordBox: {
-    width: '80%',
+    width: '100%',
     height:'auto',
     marginTop: 5,
     padding: 5,
@@ -153,7 +169,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(204, 204, 204, 0.6)'
   },
   recordTitle :{
-    width: '34%',
+    width: '30%',
     height: '100%',
     padding: 5,
     flexDirection: 'row',
@@ -177,13 +193,13 @@ const styles = StyleSheet.create({
     color: '#464646',
   },
   devideLine: {
-    height: '85%',
-    width: '1.3%',
+    height: '75%',
+    width: '1.1%',
     backgroundColor: 'black',
     borderRadius: 5
   },
   recordContent: {
-    width: '64%',
+    width: '50%',
     height: 'auto',
     paddingVertical: 5,
     paddingHorizontal: 15,
@@ -202,17 +218,14 @@ const styles = StyleSheet.create({
     color: '#464646',
   },
   noteContainer: {
-    width: '18%',
-    height:'auto',
-    marginTop: 5,
-    marginLeft: '2%',
+    width: '17%',
+    height:'100%',
     padding: 5,
     borderRadius: 10,
     flexDirection: 'row',
     justifyContent: 'center',
     alignContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(204, 204, 204, 0.6)'
   },
   disabledBtn: {
     opacity: 0.4, // 비활성화 시 투명도 변경

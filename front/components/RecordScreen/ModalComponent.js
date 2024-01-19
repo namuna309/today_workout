@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { Divider, Text, Icon } from '@rneui/themed';
 import { Input } from '@rneui/base';
@@ -8,17 +8,26 @@ import Modal from 'react-native-modal';
 import IconButtonComponent from './IconButtonComponent';
 
 
-const ModalComponent = ({ selectedDate, modalVisible, onRequestClose }) => {
+const ModalComponent = ({ recordData, selectedDate, modalVisible, onRequestClose, onSaveComplete  }) => {
   const [inputExercise, setInputExercise] = useState('');
-  const [inputDetails, setInputDetails] = useState([{ setCount: '', weight: '', option: 'kg', reps: '' }]);
-  const [note, setNote] = useState(''); // 메모장 내용을 저장할 상태
+  const [inputDetails, setInputDetails] = useState([]);
+  const [note, setNote] = useState('');
+
+  useEffect(() => {
+    if (recordData) {
+      console.log(recordData);
+      setInputExercise(recordData.exercise);
+      setInputDetails(recordData.details);
+      setNote(recordData.note);
+    }
+  }, [recordData]);
 
   const addInputDetail = () => {
     setInputDetails([...inputDetails, { setCount: '', weight: '', option: 'kg', reps: '',}]);
   };
 
   const handleInputChange = (text, index, field) => {
-    console.log(index);
+    
     const updatedDetails = inputDetails.map((inputdetail, idx) => {
       if (idx === index) {
         return { ...inputdetail, [field]: text };
@@ -39,13 +48,12 @@ const ModalComponent = ({ selectedDate, modalVisible, onRequestClose }) => {
       Alert.alert('오류', '모든 필드를 올바르게 입력해주세요.');
       return;
     }
-    const saveData = {date: selectedDate, exercise: inputExercise, details: inputDetails, note: note }
+    const saveData = {_id: recordData._id, date: selectedDate, exercise: inputExercise, details: inputDetails, note: note }
     handleSaveToDatabase(saveData);
   };
 
   // db저장  
   const handleSaveToDatabase = async (data) => {
-    console.log(data);
     try {
       const response = await fetch('http://10.0.2.2:8080/workout/save', {
         method: "POST",
@@ -59,11 +67,14 @@ const ModalComponent = ({ selectedDate, modalVisible, onRequestClose }) => {
       if (!response.ok) {
         Alert.alert(`HTTP error! status: ${response.status}`);
         throw new Error(`HTTP error! status: ${response.status}`);
+      } else {
+        const responseData = await response.json();
+        console.log('Data successfully saved to the server:', responseData);
+        onSaveComplete(); // 콜백 호출
+        onRequestClose();
       }
 
-      const responseData = await response.json();
-      console.log('Data successfully saved to the server:', responseData);
-      onRequestClose();
+      
       // 추가적인 성공 처리 로직
     } catch (error) {
       console.error('There was a problem saving data:', error);
@@ -76,7 +87,6 @@ const ModalComponent = ({ selectedDate, modalVisible, onRequestClose }) => {
     setInputDetails(updatedDetails);
   };
 
-  console.log(inputDetails)
 
   return (
     <Modal

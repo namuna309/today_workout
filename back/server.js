@@ -16,6 +16,7 @@ const mongodb_db = process.env.MONGODB_DB;
 const express = require('express');
 const cors = require("cors");
 const { MongoClient } = require('mongodb');
+const ObjectId = require('mongodb').ObjectId;
 const bodyParser = require('body-parser');
 
 
@@ -56,14 +57,27 @@ app.post('/workout/save', async (req, res) => {
             return res.json({ message: validationResult.message });
         }
         else {
-            let saveWorkoutResult = await db.collection('records').insertOne(data);
-            if (!saveWorkoutResult.acknowledged) {
-                // 500 Internal Server Error 응답
-                return res.status(500).json({ message: '데이터 저장 실패' });
-            }
+            console.log(req.body._id);
+            if (req.body._id) {
+                let updateWorkoutResult = await db.collection('records').updateOne({_id: new ObjectId(req.body._id)}, {$set:{details: req.body.details, note: req.body.note}})
+                if (!updateWorkoutResult) {
+                    return res.status(500).json({ message: '데이터 수정 실패' });
+                }
 
-            // 성공 응답
-            return res.status(200).json({ message: '데이터 저장 성공' });
+                return res.status(200).json({ message: '데이터 수정 성공' });
+            } else {
+                let saveWorkoutResult = await db.collection('records').insertOne(data);
+                if (!saveWorkoutResult.acknowledged) {
+                    // 500 Internal Server Error 응답
+                    return res.status(500).json({ message: '데이터 저장 실패' });
+                }
+
+                 // 성공 응답
+                return res.status(200).json({ message: '데이터 저장 성공' });
+            }
+            
+
+           
         }
     }
     catch (err) {
