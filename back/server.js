@@ -43,37 +43,85 @@ new MongoClient(mongodb_clusterUrl).connect().then((client) => {
 
 // Server listening
 app.listen(port, () => {
-    console.log(`http://localhost:${port} 에서 서버 실행중`)
+    console.log(`http://10.0.2.2:${port} 에서 서버 실행중`)
 })
 
 
 app.post('/workout/save', async (req, res) => {
-    let data = req.body.workouts[0];
+    let data = req.body;
     console.log(data);
-    let totalWorkout = parseInt(data.workoutweight) * parseInt(data.workoutCount) * parseInt(data.workoutSet);
-    if (data.selectedWOption == 'g') totalWorkout *= 1000;
-    let todayWorkout = {
-            eventTitle: data.eventTitle,
-            workoutweight: parseInt(data.workoutweight),
-            selectedWOption: data.selectedWOption,
-            workoutSet: parseInt(data.workoutSet),
-            workoutCount: parseInt(data.workoutCount),
-            selectedCOption: data.selectedCOption,
-            totalWorkout: totalWorkout,
-            date: data.date
-          }
+    const validationResult = validateData(data);
     try {
-        let saveWorkoutResult = await db.collection('workouts').insertOne(todayWorkout);
-        console.log(saveWorkoutResult);
-        res.status(200).send({ message: '데이터가 성공적으로 저장되었습니다.' });
-      } catch (error) {
-        res.status(500).send({ message: '서버 에러 발생' });
-        console.error('데이터 저장 에러:', error);
-      }
+        if (!validationResult.isValid) {
+            return res.json({ message: validationResult.message });
+        }
+        else {
+            let saveWorkoutResult = await db.collection('records').insertOne(data);
+            if (!saveWorkoutResult.acknowledged) {
+                // 500 Internal Server Error 응답
+                return res.status(500).json({ message: '데이터 저장 실패' });
+            }
+
+            // 성공 응답
+            return res.status(200).json({ message: '데이터 저장 성공' });
+        }
+    }
+    catch (err) {
+        return res.json({ message: `처리 중 에러 발생 -> ${err}` })
+    }
 })
 
-app.post('/workout/getDate', async (req, res) => {
-    let savedData = await db.collection('workouts').find({date: req.query.date});
-    
-    return res.status(200).send(req.query.date);
-})
+
+
+// 데이터 유효성 검사
+function validateData(data) {
+    if (!data) {
+        return { isValid: false, message: '데이터가 없습니다.' };
+    }
+
+    const { date, exercise, details, note } = data;
+
+    // 날짜, 운동, 상세 기록, 메모 필드 존재 확인
+    if (!date || !exercise ) {
+        return { isValid: false, message: '날짜 또는 운동 종목이 누락되었습니다.' };
+    }
+
+    // 날짜 형식 확인 (예: 'YYYY-MM-DD')
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(date)) {
+        return { isValid: false, message: '날짜 형식이 잘못되었습니다.' };
+    }
+
+    // 'exercise'가 문자열인지 확인
+    if (typeof exercise !== 'string' || exercise.trim() === '') {
+        return { isValid: false, message: '운동 이름은 문자열이어야 합니다.' };
+    }
+
+    // 'details' 배열 확인 및 각 항목 검증
+    if (!Array.isArray(details) || details.some(detail => {
+        return !detail.setCount || !detail.weight || !detail.option || !detail.reps ||
+            isNaN(detail.setCount) || isNaN(detail.weight) || isNaN(detail.reps);
+    })) {
+        return { isValid: false, message: '상세 기록 형식이 잘못되었습니다.' };
+    }
+
+    return { isValid: true, message: '유효한 데이터입니다.' };
+}
+
+
+app.get('/workout/getData', async (req, res) => {
+    try {
+        const date = req.query.d;
+        if (!date) {
+            return res.status(400).send('날짜 파라미터가 필요합니다.');
+        }
+
+        let savedData = await db.collection('records').find({ date: date }).toArray();
+        if(!savedData) console.log('데이터 없음');
+        else console.log(savedData);
+        return res.status(200).json(savedData);
+    } catch (err) {
+        console.error('Database query error', err);
+        return res.status(500).send('서버 오류');
+    }
+});

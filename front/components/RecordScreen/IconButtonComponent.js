@@ -2,16 +2,16 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Icon } from '@rneui/themed';
 
-const IconButtonComponent = ({ iconName, onPress }) => {
+const IconButtonComponent = ({ iconName, iconType, onPress, color, size }) => {
   return (
     <View style={styles.iconBox}>
       
       <Icon
         name={iconName}
-        type='feather'
-        color='#c8c8c8'
+        type={iconType}
+        color={color}
         onPress={onPress}
-        size={60}
+        size={parseInt(size)}
       />
     </View>
   );
@@ -20,10 +20,8 @@ const IconButtonComponent = ({ iconName, onPress }) => {
 const styles = StyleSheet.create({
   iconBox: {
     position: 'relative',
-    width: '100%',
+    width: 'auto',
     height: 'auto',
-    paddingTop: 30,
-    paddingBottom: 30,
   },
 });
 
