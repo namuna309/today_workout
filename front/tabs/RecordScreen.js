@@ -7,7 +7,7 @@ import ModalComponent from '../components/RecordScreen/ModalComponent';
 
 const RecordScreen = ({ }) => {
   const [modalVisible, setModalVisible] = useState(false);
-  const [recordData, setRecordData] = useState({exercise: '', details:[{ setCount: '', weight: '', option: 'kg', reps: '' }], note: ''})
+  const [recordData, setRecordData] = useState({ exercise: '', details: [{ setCount: '', weight: '', option: 'kg', reps: '' }], note: '' })
 
   // 현재 날짜를 YYYY-MM-DD 형식으로 얻기
   const currentDate = new Date().toISOString().split('T')[0];
@@ -32,6 +32,27 @@ const RecordScreen = ({ }) => {
     const data = await fetchWorkoutData(selectedDate);
     setWorkoutData(data);
   };
+
+  const deleteData = async (record) => {
+    try {
+      console.log(record);
+      const response = await fetch(`http://10.0.2.2:8080/workout/deleteData?rid=${record._id}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json; charset=utf-8"
+        },
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        Alert.alert('Server response error');
+      }
+      fetchData();
+      console.log('Data successfully deleted to the server:', record);
+    } catch (error) {
+      Alert.alert('Fetch error:', error);
+    }
+
+  }
 
   // ModalComponent에서 사용할 저장 완료 콜백
   const onSaveComplete = () => {
@@ -64,58 +85,81 @@ const RecordScreen = ({ }) => {
     });
   }, [selectedDate]);
 
+  const handleLongPress = (record) => {
+    Alert.alert(
+      "운동 기록 관리",
+      "원하는 작업을 선택하세요",
+      [
+        {
+          text: "삭제",
+          onPress: () => deleteData(record),
+          style: "destructive"
+        },
+        {
+          text: "닫기",
+          onPress: () => console.log("Cancel Pressed"),
+          style: "cancel"
+        }
+      ],
+      { cancelable: true }
+    );
+  };
+
   return (
     <View style={styles.container}>
       <CalendarComponent selectedDate={selectedDate} onDaySelect={onDaySelect} />
       <ScrollView style={styles.recordContainer}>
-        
+
         {workoutData.map((record, index) => (
-          <TouchableOpacity onPress={() => toggleModal(workoutData[index])}>
-          <View style={styles.viewRecordContainer}>
-            <View style={styles.viewRecordBox}>
-              <View style={styles.recordTitle}>
-                <View style={styles.recordTitleTxtBox}>
-                  <Text style={styles.recordTitleTxt}>{record.exercise}</Text>
+          <TouchableOpacity 
+          onPress={() => toggleModal(workoutData[index])}
+          onLongPress={() => handleLongPress(record)}
+          >
+            <View style={styles.viewRecordContainer}>
+              <View style={styles.viewRecordBox}>
+                <View style={styles.recordTitle}>
+                  <View style={styles.recordTitleTxtBox}>
+                    <Text style={styles.recordTitleTxt}>{record.exercise}</Text>
                   </View>
-              </View>
-              <View style={styles.devideLine}></View>
-              <View style={styles.recordContent}>
-                {
-                  record.details.map((detail, idx) => {
-                    return (
-                    <View style={styles.recordDetail}>
-                        <Text style={styles.recordDetailTxt}>{detail.weight}{detail.option}</Text>
-                        <Text style={styles.recordDetailTxt}>{detail.reps}회</Text>
-                        <Text style={styles.recordDetailTxt}>{detail.setCount}SET</Text>
-                    </View>
-                    )
-                  })
-                  
-                }
-              </View>
-              <View style={styles.devideLine}></View>
-              <View style={styles.noteContainer}>
-              <View 
-                style={isButtonDisabled(record) ? styles.disabledBtn : {}}
-              >
-                <IconButtonComponent 
-                  iconName='pencil-square-o'
-                  iconType='font-awesome'
-                  color='#464646'
-                  size='25'
-                />
+                </View>
+                <View style={styles.devideLine}></View>
+                <View style={styles.recordContent}>
+                  {
+                    record.details.map((detail, idx) => {
+                      return (
+                        <View style={styles.recordDetail}>
+                          <Text style={styles.recordDetailTxt}>{detail.weight}{detail.option}</Text>
+                          <Text style={styles.recordDetailTxt}>{detail.reps}회</Text>
+                          <Text style={styles.recordDetailTxt}>{detail.setCount}SET</Text>
+                        </View>
+                      )
+                    })
+
+                  }
+                </View>
+                <View style={styles.devideLine}></View>
+                <View style={styles.noteContainer}>
+                  <View
+                    style={isButtonDisabled(record) ? styles.disabledBtn : {}}
+                  >
+                    <IconButtonComponent
+                      iconName='pencil-square-o'
+                      iconType='font-awesome'
+                      color='#464646'
+                      size='25'
+                    />
+                  </View>
                 </View>
               </View>
+
+
+
             </View>
-            
-            
-            
-          </View>
           </TouchableOpacity>
         ))}
-        
+
         <View style={styles.addRecordBtnContainer}>
-          <TouchableOpacity onPress={() => toggleModal({exercise: '', details:[{ setCount: '', weight: '', option: 'kg', reps: '' }], note: ''})}>
+          <TouchableOpacity onPress={() => toggleModal({ exercise: '', details: [{ setCount: '', weight: '', option: 'kg', reps: '' }], note: '' })}>
             <View style={styles.addRecordBtn}>
               <IconButtonComponent
                 iconName='plus-circle'
@@ -149,7 +193,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  
+
   viewRecordContainer: {
     width: '100%',
     height: 'auto',
@@ -159,7 +203,7 @@ const styles = StyleSheet.create({
   },
   viewRecordBox: {
     width: '100%',
-    height:'auto',
+    height: 'auto',
     marginTop: 5,
     padding: 5,
     borderRadius: 10,
@@ -168,7 +212,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(204, 204, 204, 0.6)'
   },
-  recordTitle :{
+  recordTitle: {
     width: '30%',
     height: '100%',
     padding: 5,
@@ -219,7 +263,7 @@ const styles = StyleSheet.create({
   },
   noteContainer: {
     width: '17%',
-    height:'100%',
+    height: '100%',
     padding: 5,
     borderRadius: 10,
     flexDirection: 'row',
@@ -249,7 +293,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'rgba(204, 204, 204, 0.6)'
   },
-  
+
   addRecordBtnTxtBox: {
     width: 'auto',
     height: 'auto',

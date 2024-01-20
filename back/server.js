@@ -139,3 +139,21 @@ app.get('/workout/getData', async (req, res) => {
         return res.status(500).send('서버 오류');
     }
 });
+
+app.get('/workout/deleteData', async (req, res) => {
+    try {
+        const recordId = req.query.rid;
+        if (!recordId) {
+            return res.status(400).send('기록 document id가 필요합니다.');
+        }
+
+        let deleteData = await db.collection('records').deleteOne({_id : new ObjectId(recordId)});
+        
+        if(!deleteData) onsole.log('삭제 데이터 없음');
+        else console.log(deleteData);
+        return res.status(200).json(deleteData);
+    } catch (err) {
+        console.error('Database query error', err);
+        return res.status(500).send('서버 오류');
+    }
+})
