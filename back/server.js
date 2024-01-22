@@ -50,7 +50,7 @@ app.listen(port, () => {
 
 app.post('/workout/save', async (req, res) => {
     let data = req.body;
-    console.log(data);
+    console.log('/workout/save', data);
     const validationResult = validateData(data);
     try {
         if (!validationResult.isValid) {
@@ -185,12 +185,17 @@ app.get('/records/getExDates', async (req, res) => {
 
 
 // 운동 종목명
-app.get('/exercise/getExs', async (req, res) => {
+app.get('/exercises/getExs', async (req, res) => {
     try {
         let savedData = await db.collection('exercises').find().toArray();
         if(!savedData) console.log('/exercise/getExs', '데이터 없음');
         else console.log('/exercise/getExs', savedData);
-        return res.status(200).json(savedData);
+
+        let exercises = new Array();
+        savedData.map((data) => {
+            exercises.push(data.name); 
+        });
+        return res.status(200).json(exercises);
     } catch(err) {
         console.error('Database query error', err);
         return res.status(500).send('서버 오류');

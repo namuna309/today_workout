@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, TextInput, Alert, FlatList, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { Divider, Text, Icon } from '@rneui/themed';
 import { Input } from '@rneui/base';
 import { Dropdown } from 'react-native-element-dropdown';
@@ -10,42 +10,43 @@ import IconButtonComponent from './IconButtonComponent';
 
 const ModalComponent = ({ recordData, selectedDate, modalVisible, onRequestClose, onSaveComplete  }) => {
   const [inputExercise, setInputExercise] = useState('');
-  const [exerciseOptions, setExerciseOptions] = useState([]);
-  const [isDropdownVisible, setIsDropdownVisible] = useState(false);
   const [inputDetails, setInputDetails] = useState([]);
   const [note, setNote] = useState('');
 
-  // 운동 종목명 가져오기 위한 함수
-  const fetchExerciseNames = async () => {
+  const [dropdownVisible, setDropdownVisible] = useState(false);
+  const [exerciseOptions, setExerciseOptions] = useState([]);
+
+  const handleSelectExercise = (exercise) => {
+    console.log(exercise);
+    setInputExercise(exercise);
+    setDropdownVisible(false);
+    Keyboard.dismiss(); 
+  };
+
+  // 기존 운동 종목 가져오기
+  const fetchExercises = async () => {
     try {
-      const response = await fetch('http://10.0.2.2:8080/exercise/getExs');
+      const response = await fetch(`http://10.0.2.2:8080/exercises/getExs`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json; charset=utf-8"
+        },
+        credentials: 'include',
+      });
       if (!response.ok) {
-        throw new Error('Server response error');
+        Alert.alert('Server response error');
       }
       return await response.json();
     } catch (error) {
-      console.error('Fetch error:', error);
+      Alert.alert('Fetch error:', error);
     }
-  };
+  }
 
-  // 운동 종목명 가져오기
   useEffect(() => {
-    const getExercises = async () => {
-      const exercises = await fetchExerciseNames();
-      if (exercises) {
-        setExerciseOptions(exercises);
-      }
-    }
-
-    getExercises();
-    console.log(exerciseOptions);
+    fetchExercises().then((exercises) => {
+      setExerciseOptions(exercises);
+    })
   }, []);
-
-  const handleExOptSelect = (value) => {
-    setInputExercise(value);
-    setIsDropdownVisible(false);
-  };
-
 
   // 기존 운동 기록 가져오기
   useEffect(() => {
@@ -124,6 +125,10 @@ const ModalComponent = ({ recordData, selectedDate, modalVisible, onRequestClose
 
 
   return (
+    <TouchableWithoutFeedback onPress={() => {
+      setDropdownVisible(false);
+      Keyboard.dismiss();
+    }}>
     <Modal
       isVisible={modalVisible}
       onSwipeComplete={onRequestClose}
@@ -158,40 +163,45 @@ const ModalComponent = ({ recordData, selectedDate, modalVisible, onRequestClose
 
         <Divider />
         <View style={styles.modalContentBox}>
+          {/* 종목명 입력 */}
           <View style={styles.inputExerciseBox}>
           
             <Input
               leftIcon={{ type: 'material-community', name: 'weight-lifter' }}
-              onChangeText={text => {
-                setInputExercise(text);
-                setIsDropdownVisible(true);
-              }}
+              
               value={inputExercise}
               placeholder="운동 종목을 입력하세요"
+              onFocus={() => setDropdownVisible(true)}
+              onChangeText={setInputExercise}
             />
-            {/* {isDropdownVisible && (
-            <FlatList
-              data={exerciseOptions}
-              renderItem={({ item }) => (
-                <TouchableOpacity onPress={() => handleExOptSelect(item)}>
-                  <Text>{item}</Text>
-                </TouchableOpacity>
-              )}
-              keyExtractor={item => item}
-            />
-          )} */}
+            {dropdownVisible && (
+        <FlatList
+        Key
+        keyboardShouldPersistTaps={'handled'}
+          data={exerciseOptions}
+          keyExtractor={(item) => item}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.dropdownItem}
+              onPress={() => handleSelectExercise(item)}
+            >
+              <Text>{item}</Text>
+            </TouchableOpacity>
+          )}
+        />
+      )}
+            
           </View>
-
+          {/* 세트 수, 무게, 횟수 입력 */}
           <SwipeListView
             data={inputDetails}
             renderItem={({ item, index }) => (
               <View key={index} style={styles.inputDetailBox}>
                 <View style={styles.inputSetCountBox}>
-                  
-                  
                   <Input
                     keyboardType="numeric"
                     onChangeText={(text) => handleInputChange(text, index, 'setCount')}
+                    onFocus={() => setDropdownVisible(false)}
                     value={item.setCount}
                     placeholder="세트 수"
                   />
@@ -200,6 +210,7 @@ const ModalComponent = ({ recordData, selectedDate, modalVisible, onRequestClose
                   <Input
                     keyboardType="numeric"
                     onChangeText={(text) => handleInputChange(text, index, 'weight')}
+                    onFocus={() => setDropdownVisible(false)}
                     value={item.weight}
                     placeholder="무게"
                     containerStyle={{ width: "65%" }}
@@ -213,6 +224,7 @@ const ModalComponent = ({ recordData, selectedDate, modalVisible, onRequestClose
                       { label: 'lbs', value: 'lbs' },
                     ]}
                     onChange={(opt) => handleInputChange(opt.label, index, 'option')}
+                    onFocus={() => setDropdownVisible(false)}
                     value={item.option}
                     labelField="label"
                     valueField="value"
@@ -223,6 +235,7 @@ const ModalComponent = ({ recordData, selectedDate, modalVisible, onRequestClose
                   <Input
                     keyboardType="numeric"
                     onChangeText={(text) => handleInputChange(text, index, 'reps')}
+                    onFocus={() => setDropdownVisible(false)}
                     value={item.reps}
                     placeholder="반복 횟수"
                   />
@@ -268,11 +281,13 @@ const ModalComponent = ({ recordData, selectedDate, modalVisible, onRequestClose
           multiline
           numberOfLines={4}
           onChangeText={setNote}
+          onFocus={() => setDropdownVisible(false)}
           value={note}
           placeholder="메모를 입력하세요"
         />
       </View>
     </Modal>
+    </TouchableWithoutFeedback>
   );
 };
 
@@ -315,12 +330,10 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 'auto',
   },
-  dropdown: {
-    height: 50,
-    borderColor: 'gray',
-    borderWidth: 0.5,
-    borderRadius: 8,
-    paddingHorizontal: 8,
+  dropdownItem: {
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd'
   },
   inputDetailBox: {
     width: '100%',
