@@ -10,16 +10,24 @@ const RecordScreen = ({ }) => {
   const [recordData, setRecordData] = useState({ exercise: '', details: [{ setCount: '', weight: '', option: 'kg', reps: '' }], note: '' })
 
   // 현재 날짜를 YYYY-MM-DD 형식으로 얻기
-  const currentDate = new Date().toISOString().split('T')[0];
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
 
   // 날짜별 DB 저장된 운동 데이터 가져오기
   const [workoutData, setWorkoutData] = useState([]);
 
+  // 월별 DB 저장된 운동 날짜 가져오기
+  const [currentMonth, setCurrentMonth] = useState('');
+  const [workoutDates, setWorkoutDates] = useState([]);
+
   const isButtonDisabled = record => record.note.trim() === '';
 
   const onDaySelect = (day) => {
     setSelectedDate(day.dateString);
+  };
+
+  const handleMonthChange = (month) => {
+    setCurrentMonth(month.month);
+    setSelectedDate(month.dateString);
   };
 
   const toggleModal = (record) => {
@@ -31,6 +39,7 @@ const RecordScreen = ({ }) => {
   const fetchData = async () => {
     const data = await fetchWorkoutData(selectedDate);
     setWorkoutData(data);
+
   };
 
   const deleteData = async (record) => {
@@ -61,7 +70,7 @@ const RecordScreen = ({ }) => {
 
   const fetchWorkoutData = async (selectedDate) => {
     try {
-      const response = await fetch(`http://10.0.2.2:8080/workout/getData?d=${selectedDate}`, {
+      const response = await fetch(`http://10.0.2.2:8080/workout/getData?d=${new Date(selectedDate).valueOf()}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json; charset=utf-8"
@@ -77,13 +86,42 @@ const RecordScreen = ({ }) => {
     }
   };
 
+  const fetchWorkoutDates = async (selectedDate) => {
+    try {
+      const response = await fetch(`http://10.0.2.2:8080/records/getExDates?date=${new Date(selectedDate).valueOf()}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json; charset=utf-8"
+        },
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        Alert.alert('Server response error');
+      }
+      return await response.json();
+    } catch (error) {
+      Alert.alert('Fetch error:', error);
+    }
+  }
+
+
   useEffect(() => {
     // 선택된 날짜가 변경될 때마다 운동 기록 가져오기
     fetchWorkoutData(selectedDate).then(data => {
       setWorkoutData(data);
-      console.log(data);
     });
   }, [selectedDate]);
+
+  useEffect(() => {
+    // 달별 운동 기록이 있는 날짜 가져오기
+    fetchWorkoutDates(selectedDate).then(data => {
+      let dates = new Array(); 
+      data.map((record) => {
+        dates.push(new Date(record.date).toISOString().split('T')[0])
+      })
+      setWorkoutDates(dates);
+    })
+  }, [currentMonth, workoutData])
 
   const handleLongPress = (record) => {
     Alert.alert(
@@ -107,7 +145,7 @@ const RecordScreen = ({ }) => {
 
   return (
     <View style={styles.container}>
-      <CalendarComponent selectedDate={selectedDate} onDaySelect={onDaySelect} />
+      <CalendarComponent selectedDate={selectedDate} onDaySelect={onDaySelect} workoutDates={workoutDates} handleMonthChange={handleMonthChange}/>
       <ScrollView style={styles.recordContainer}>
 
         {workoutData.map((record, index) => (

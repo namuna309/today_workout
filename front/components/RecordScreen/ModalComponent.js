@@ -10,9 +10,44 @@ import IconButtonComponent from './IconButtonComponent';
 
 const ModalComponent = ({ recordData, selectedDate, modalVisible, onRequestClose, onSaveComplete  }) => {
   const [inputExercise, setInputExercise] = useState('');
+  const [exerciseOptions, setExerciseOptions] = useState([]);
+  const [isDropdownVisible, setIsDropdownVisible] = useState(false);
   const [inputDetails, setInputDetails] = useState([]);
   const [note, setNote] = useState('');
 
+  // 운동 종목명 가져오기 위한 함수
+  const fetchExerciseNames = async () => {
+    try {
+      const response = await fetch('http://10.0.2.2:8080/exercise/getExs');
+      if (!response.ok) {
+        throw new Error('Server response error');
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Fetch error:', error);
+    }
+  };
+
+  // 운동 종목명 가져오기
+  useEffect(() => {
+    const getExercises = async () => {
+      const exercises = await fetchExerciseNames();
+      if (exercises) {
+        setExerciseOptions(exercises);
+      }
+    }
+
+    getExercises();
+    console.log(exerciseOptions);
+  }, []);
+
+  const handleExOptSelect = (value) => {
+    setInputExercise(value);
+    setIsDropdownVisible(false);
+  };
+
+
+  // 기존 운동 기록 가져오기
   useEffect(() => {
     if (recordData) {
       console.log(recordData);
@@ -48,7 +83,7 @@ const ModalComponent = ({ recordData, selectedDate, modalVisible, onRequestClose
       Alert.alert('오류', '모든 필드를 올바르게 입력해주세요.');
       return;
     }
-    const saveData = {_id: recordData._id, date: selectedDate, exercise: inputExercise, details: inputDetails, note: note }
+    const saveData = {_id: recordData._id, date: new Date(selectedDate).valueOf(), exercise: inputExercise, details: inputDetails, note: note }
     handleSaveToDatabase(saveData);
   };
 
@@ -124,12 +159,27 @@ const ModalComponent = ({ recordData, selectedDate, modalVisible, onRequestClose
         <Divider />
         <View style={styles.modalContentBox}>
           <View style={styles.inputExerciseBox}>
+          
             <Input
               leftIcon={{ type: 'material-community', name: 'weight-lifter' }}
-              onChangeText={setInputExercise}
+              onChangeText={text => {
+                setInputExercise(text);
+                setIsDropdownVisible(true);
+              }}
               value={inputExercise}
               placeholder="운동 종목을 입력하세요"
             />
+            {/* {isDropdownVisible && (
+            <FlatList
+              data={exerciseOptions}
+              renderItem={({ item }) => (
+                <TouchableOpacity onPress={() => handleExOptSelect(item)}>
+                  <Text>{item}</Text>
+                </TouchableOpacity>
+              )}
+              keyExtractor={item => item}
+            />
+          )} */}
           </View>
 
           <SwipeListView
@@ -137,6 +187,8 @@ const ModalComponent = ({ recordData, selectedDate, modalVisible, onRequestClose
             renderItem={({ item, index }) => (
               <View key={index} style={styles.inputDetailBox}>
                 <View style={styles.inputSetCountBox}>
+                  
+                  
                   <Input
                     keyboardType="numeric"
                     onChangeText={(text) => handleInputChange(text, index, 'setCount')}
@@ -262,6 +314,13 @@ const styles = StyleSheet.create({
   inputExerciseBox: {
     width: '100%',
     height: 'auto',
+  },
+  dropdown: {
+    height: 50,
+    borderColor: 'gray',
+    borderWidth: 0.5,
+    borderRadius: 8,
+    paddingHorizontal: 8,
   },
   inputDetailBox: {
     width: '100%',

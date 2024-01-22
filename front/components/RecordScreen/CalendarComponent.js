@@ -2,17 +2,32 @@ import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { CalendarList } from 'react-native-calendars';
 
-const CalendarComponent = ({selectedDate, onDaySelect}) => {
+const CalendarComponent = ({selectedDate, onDaySelect, workoutDates, handleMonthChange}) => {
 
-  const markedDates = {
-    [selectedDate]: { selected: true, selectedColor: 'black' },
-  };
+  let wd = new Object();
+  let markedDates = new Object();
+
+  if (workoutDates.length > 0) {
+    workoutDates.forEach((date) => {
+      if (date == selectedDate) wd[date] = {selected: true, selectedColor: 'black', selectedDotColor: 'white', marked: true, dotColor: 'red'}
+      else wd[date] = { marked: true, dotColor: 'red'}
+    })
+    
+    markedDates = {
+      ...wd,
+    }; 
+  } 
+  if (!workoutDates.includes(selectedDate)){
+    markedDates[selectedDate] = {selected: true, selectedColor: 'black',}
+
+  } 
 
   return (
     <View style={styles.calendarContainer}>
       <CalendarList
-        current={Date()}
+        current={selectedDate}
         onDayPress={onDaySelect}
+        onMonthChange={(month) => handleMonthChange(month)}
         markedDates={markedDates}
         horizontal={true}
         pagingEnabled={true}

@@ -57,7 +57,8 @@ app.post('/workout/save', async (req, res) => {
             return res.json({ message: validationResult.message });
         }
         else {
-            console.log(req.body._id);
+            
+            // 운동 기록 저장
             if (req.body._id) {
                 let updateWorkoutResult = await db.collection('records').updateOne({_id: new ObjectId(req.body._id)}, {$set:{details: req.body.details, note: req.body.note}})
                 if (!updateWorkoutResult) {
@@ -67,9 +68,21 @@ app.post('/workout/save', async (req, res) => {
                 return res.status(200).json({ message: '데이터 수정 성공' });
             } else {
                 let saveWorkoutResult = await db.collection('records').insertOne(data);
+                
+                // 운동 종목 저장
+                let findExercise = await db.collection('exercises').find({name: req.body.exercise}).toArray();
+                console.log('findExercise: ', findExercise);
+                if (findExercise.length === 0) {
+                    let saveExerciseResult = await db.collection('exercises').insertOne({name: req.body.exercise});
+                    if (!saveExerciseResult.acknowledged) {
+                        return res.status(500).json({ message: '종목명 저장 실패' });
+                    }
+                }
+
+                
                 if (!saveWorkoutResult.acknowledged) {
                     // 500 Internal Server Error 응답
-                    return res.status(500).json({ message: '데이터 저장 실패' });
+                    return res.status(500).json({ message: '운동기록 저장 실패' });
                 }
 
                  // 성공 응답
@@ -100,12 +113,6 @@ function validateData(data) {
         return { isValid: false, message: '날짜 또는 운동 종목이 누락되었습니다.' };
     }
 
-    // 날짜 형식 확인 (예: 'YYYY-MM-DD')
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!dateRegex.test(date)) {
-        return { isValid: false, message: '날짜 형식이 잘못되었습니다.' };
-    }
-
     // 'exercise'가 문자열인지 확인
     if (typeof exercise !== 'string' || exercise.trim() === '') {
         return { isValid: false, message: '운동 이름은 문자열이어야 합니다.' };
@@ -125,14 +132,15 @@ function validateData(data) {
 
 app.get('/workout/getData', async (req, res) => {
     try {
-        const date = req.query.d;
+        const date = parseFloat(req.query.d);
+        
         if (!date) {
             return res.status(400).send('날짜 파라미터가 필요합니다.');
         }
 
         let savedData = await db.collection('records').find({ date: date }).toArray();
-        if(!savedData) console.log('데이터 없음');
-        else console.log(savedData);
+        if(savedData.length === 0) console.log('/workout/getData', '데이터 없음');
+        else console.log('/workout/getData', savedData);
         return res.status(200).json(savedData);
     } catch (err) {
         console.error('Database query error', err);
@@ -149,11 +157,43 @@ app.get('/workout/deleteData', async (req, res) => {
 
         let deleteData = await db.collection('records').deleteOne({_id : new ObjectId(recordId)});
         
-        if(!deleteData) onsole.log('삭제 데이터 없음');
-        else console.log(deleteData);
+        if(!deleteData) console.log('/workout/deleteData', '삭제 데이터 없음');
+        else console.log('/workout/deleteData', deleteData);
         return res.status(200).json(deleteData);
     } catch (err) {
         console.error('Database query error', err);
         return res.status(500).send('서버 오류');
     }
 })
+
+// 운동 날짜
+app.get('/records/getExDates', async (req, res) => {
+    try {
+        let curDate = new Date(parseFloat(req.query.date));
+        let firstDate = new Date(curDate.getFullYear(), curDate.getMonth(), 2).setUTCHours(0, 0, 0, 0).valueOf();
+        let lastDate = new Date(curDate.getFullYear(), curDate.getMonth() + 1, 1).setUTCHours(0, 0, 0, 0).valueOf();
+        
+        let savedData = await db.collection('records').find({date: {$gte: firstDate, $lte: lastDate }}).toArray();
+        if(savedData.length === 0) console.log('/records/getExDates', '데이터 없음');
+        else console.log('/records/getExDates', savedData);
+        return res.status(200).json(savedData);
+    } catch(err) {
+        console.error('Database query error', err);
+        return res.status(500).send('서버 오류');
+    }
+})
+
+
+// 운동 종목명
+app.get('/exercise/getExs', async (req, res) => {
+    try {
+        let savedData = await db.collection('exercises').find().toArray();
+        if(!savedData) console.log('/exercise/getExs', '데이터 없음');
+        else console.log('/exercise/getExs', savedData);
+        return res.status(200).json(savedData);
+    } catch(err) {
+        console.error('Database query error', err);
+        return res.status(500).send('서버 오류');
+    }
+})
+
