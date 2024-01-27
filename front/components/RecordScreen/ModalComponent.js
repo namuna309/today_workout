@@ -263,7 +263,6 @@ const ModalComponent = ({ recordData, selectedDate, modalVisible, onRequestClose
             stopLeftSwipe={100}
           />
 
-
         </View>
         <TouchableOpacity onPress={addInputDetail}>
           <View style={styles.modalPlusIcon}>

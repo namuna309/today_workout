@@ -78,7 +78,6 @@ app.post('/workout/save', async (req, res) => {
                         return res.status(500).json({ message: '종목명 저장 실패' });
                     }
                 }
-
                 
                 if (!saveWorkoutResult.acknowledged) {
                     // 500 Internal Server Error 응답
@@ -87,10 +86,7 @@ app.post('/workout/save', async (req, res) => {
 
                  // 성공 응답
                 return res.status(200).json({ message: '데이터 저장 성공' });
-            }
-            
-
-           
+            }           
         }
     }
     catch (err) {
@@ -179,6 +175,25 @@ app.get('/records/getExDates', async (req, res) => {
         return res.status(200).json(savedData);
     } catch(err) {
         console.error('Database query error', err);
+        return res.status(500).send('서버 오류');
+    }
+})
+
+// 기간 별 운동 데이터 추출
+app.get('/records/period', async (req, res) => {
+    const startDate = new Date(req.query.startDate).valueOf();
+    const endDate = new Date(req.query.endDate).valueOf();
+    const exercise = req.query.exercise;
+    try {
+        let savedDatas = await db.collection('records').find({date: {$gte: endDate, $lte: startDate}, exercise: exercise }).toArray();
+        
+        if(savedDatas.length == 0) console.log(`/records/period?startDate=${startDate}&endDate=${endDate}&exercise=${exercise}`, '데이터 없음');
+        
+        console.log(`/records/period?startDate=${startDate}&endDate=${endDate}&exercise=${exercise}`, '데이터 요청 및 전송 성공');        return res.status(200).json(savedDatas);
+        
+    } catch (err) {
+        console.log(`/records/period?startDate=${startDate}&endDate=${endDate}&exercise=${exercise}`);
+        console.log(err);
         return res.status(500).send('서버 오류');
     }
 })
