@@ -4,6 +4,7 @@ import { Dropdown } from 'react-native-element-dropdown';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { LineChart } from 'react-native-chart-kit';
 import { ScrollView } from 'react-native-gesture-handler';
+import IconButtonComponent from '../components/RecordScreen/IconButtonComponent';
 
 // 차트에 나올거: 총 운동 볼륨, 최고 무게, 최대 반복수, 최대 세트수
 // instagram, inbody 대시보드 참고하기
@@ -16,13 +17,7 @@ const ChartScreen = ({ }) => {
     // 종목 필터링
     const [isFocus, setIsFocus] = useState(false);
     const [exercise, setExercise] = useState();
-    const [dropdownVisible, setDropdownVisible] = useState(false);
     const [exerciseList, setExerciseList] = useState([]);
-
-    // 무게 단위 선택
-    const [weightOption, setWeightOption] = useState();
-    const [wodropdownVisible, setWodropdownVisible] = useState(false);
-    const [weightOptionList, setWeightOptionList] = useState([])
 
     // 기간 필터링
     const [startDate, setStartDate] = useState(new Date());
@@ -34,15 +29,29 @@ const ChartScreen = ({ }) => {
     const [showEndDatePicker, setShowEndDatePicker] = useState(false);
 
     // 차트 
-    const [labels, setLabels] = useState([]);
-    const [rawDatas, setRawDatas] = useState();
     const [transDatas, setTransData] = useState();
-
-
-
+    const chartConfig = {
+        backgroundColor: "#FFFFFF",
+        backgroundGradientFrom: "#FFFFFF",
+        backgroundGradientTo: "#FFFFFF",
+        decimalPlaces: 2, // optional, defaults to 2dp
+        color: (opacity = 1) => `rgba(89, 89, 89, ${opacity})`,
+        style: {
+          borderRadius: 16
+        },
+        fillShadowGradientFromOpacity: 0,
+        fillShadowGradientFromOffset: 1,
+        propsForVerticalLabels: {
+            fontSize: 16,
+            fontWeight: 'bold',
+        },
+        propsForDots: {
+            r: "5", // 점(Dot)의 반지름 크기
+          },
+      };
 
     // 운동 종목 가져오기
-    async function fetchExercises()  {
+    async function fetchExercises() {
         const url = new URL(`${ENDPOINT}/exercises/getExs`);
         try {
             const response = await fetch(url, {
@@ -77,7 +86,7 @@ const ChartScreen = ({ }) => {
             if (!response.ok) {
                 console.log('Server response error');
             }
-            
+
             return await response.json();
         } catch (error) {
             console.log('Fetch error:', error);
@@ -96,6 +105,19 @@ const ChartScreen = ({ }) => {
         setEndDate(currentDate);
     };
 
+    function checkDatas() {
+        if (!exercise) return false;
+        if (!transDatas) return false;
+        if (!transDatas.dates || !transDatas.totalVolumes || !transDatas.maxWeights || !transDatas.maxReps || !transDatas.maxSetCounts) return false;
+        if (transDatas.dates.length == 0 || transDatas.totalVolumes.length == 0 || transDatas.maxWeights.length == 0 || transDatas.maxReps.length == 0 || transDatas.maxSetCounts.length == 0) return false;
+        
+        const arrayLengths = Object.values(transDatas).map(array => array.length);
+        const firstLength = arrayLengths[0];
+
+        if(!arrayLengths.every(length => length === firstLength)) return false;
+
+        return true;
+    }
 
     useEffect(() => {
         fetchExercises().then((exercises) => {
@@ -106,22 +128,41 @@ const ChartScreen = ({ }) => {
     useEffect(() => {
         const fetchData = async () => {
             const data = await fetchExerciseData();
-            setRawDatas(data);
+            setTransData(dataTransform(data)) 
         };
-    
-        fetchData();
-    }, [exercise, startDate, endDate]);
-
-    useEffect(()=>{
-        let d = new Array();
-        try{
-            setTransData(dataTransform(rawDatas))
-        } 
-        catch (err) {
-            console.log('rawDatas: ', rawDatas, ' => 데이터가 없습니다');
+        try {
+            if (exercise) {
+                fetchData();
+            }
+        } catch (err) {
+            console.log(err);
         }
         
-    }, [rawDatas])
+    }, [exercise, startDate, endDate]);
+
+    useEffect(() => {
+        console.log('transDatas', transDatas);
+    }, [transDatas])
+
+    function formatLabels(dates) {
+        const formattedLabels = [];
+        const yearsIncluded = new Set();
+
+      
+        dates.forEach(dateString => {
+          const [year, month, day] = dateString.split('-');
+          const shortYear = year.substring(2); // 연도의 마지막 두 자리만 추출
+
+          if (!yearsIncluded.has(year)) {
+            yearsIncluded.add(year);
+            formattedLabels.push(`${shortYear}.${month}.${day}`);
+          } else {
+            formattedLabels.push(`${month}.${day}`);
+          }
+        });
+      
+        return formattedLabels;
+      }
 
     function dataTransform(records) {
         let dates = new Array();
@@ -148,8 +189,8 @@ const ChartScreen = ({ }) => {
             maxReps.push(Math.max(...repsList));
             maxSetCount.push(Math.max(...setCountList));
         })
-    
-        return {dates: dates, totalVolumes: totalVolumes, maxWeights: maxWeight, maxReps: maxReps, maxSetCounts: maxSetCount}
+
+        return { dates: formatLabels(dates), totalVolumes: totalVolumes, maxWeights: maxWeight, maxReps: maxReps, maxSetCounts: maxSetCount }
     }
 
 
@@ -179,38 +220,48 @@ const ChartScreen = ({ }) => {
                         }}
                     />
                 </View>
-            </View>
-            <View style={styles.periodOptions}>
-                <View style={styles.periodOptionsBox}>
-                    <TouchableOpacity onPress={() => setShowEndDatePicker(true)}>
-                        <Text style={styles.periodOptionsText}>{`${endDate.getMonth() + 1}월 ${endDate.getDate()}일`}</Text>
-                    </TouchableOpacity>
-                    {showEndDatePicker && (
-                        <DateTimePicker
-                            value={endDate}
-                            mode="date"
-                            display="default"
-                            onChange={onChangeEndDate}
-                        />
-                    )}
-                    <Text style={styles.periodOptionsText}>{' ~ '}</Text>
-                    <TouchableOpacity onPress={() => setShowStartDatePicker(true)}>
-                        <Text style={styles.periodOptionsText}>{`${startDate.getMonth() + 1}월 ${startDate.getDate()}일`}</Text>
-                    </TouchableOpacity>
-                    {showStartDatePicker && (
-                        <DateTimePicker
-                            value={startDate}
-                            mode="date"
-                            display="default"
-                            onChange={onChangeStartDate}
-                        />
-                    )}
+                <View style={styles.periodOptions}>
+                    <View style={styles.periodOptionsBox}>
+                        <View style={styles.periodOptionsIconBox}>
+                            <IconButtonComponent 
+                                iconName={'calendar'}
+                                iconType={'antdesign'}
+                                color={'#F45959'}
+                                size={20}
+                            />
+                        </View>
+                        <View style={styles.periodOptionsTextBox}>
+                            <TouchableOpacity onPress={() => setShowEndDatePicker(true)}>
+                                <Text style={styles.periodOptionsText}>{`${endDate.getMonth() + 1}. ${endDate.getDate()}`}</Text>
+                            </TouchableOpacity>
+                            {showEndDatePicker && (
+                                <DateTimePicker
+                                    value={endDate}
+                                    mode="date"
+                                    display="default"
+                                    onChange={onChangeEndDate}
+                                />
+                            )}
+                            <Text style={styles.periodOptionsText}>{' ~ '}</Text>
+                            <TouchableOpacity onPress={() => setShowStartDatePicker(true)}>
+                                <Text style={styles.periodOptionsText}>{`${startDate.getMonth() + 1}. ${startDate.getDate()}`}</Text>
+                            </TouchableOpacity>
+                            {showStartDatePicker && (
+                                <DateTimePicker
+                                    value={startDate}
+                                    mode="date"
+                                    display="default"
+                                    onChange={onChangeStartDate}
+                                />
+                            )}
+                        </View>
+                    </View>
                 </View>
             </View>
+            
             {
-                exercise && rawDatas && transDatas ? (
+                checkDatas() ? (
                     <>
-
                         <ScrollView style={styles.chartsContainer}>
                             {/* 차트 컴포넌트 */}
                             <View style={styles.chartsBox}>
@@ -225,39 +276,45 @@ const ChartScreen = ({ }) => {
                                                 labels: transDatas.dates,
                                                 datasets: [
                                                     {
-                                                        data: transDatas.totalVolumes
+                                                        data: transDatas.totalVolumes,
+                                                        color: (opacity = 1) => `rgba(89, 89, 89, ${opacity})`,
+                                                        strokeWidth: 5
                                                     }
                                                 ]
                                             }}
                                             width={Dimensions.get("window").width} // from react-native
-                                            height={200}
-                                            yAxisLabel="$"
-                                            yAxisSuffix="k"
-                                            yAxisInterval={1} // optional, defaults to 1
-                                            chartConfig={{
-                                                backgroundColor: "#e26a00",
-                                                backgroundGradientFrom: "#fb8c00",
-                                                backgroundGradientTo: "#ffa726",
-                                                decimalPlaces: 2, // optional, defaults to 2dp
-                                                color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-                                                labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-                                                style: {
-                                                    borderRadius: 16
-                                                },
-                                                propsForDots: {
-                                                    r: "6",
-                                                    strokeWidth: "2",
-                                                    stroke: "#ffa726"
-                                                }
+                                            height={160}   
+                                            withHorizontalLabels={false}                                            yAxisInterval={1} // optional, defaults to 1
+                                            chartConfig={chartConfig}    
+                                            withHorizontalLines = {false} 
+                                            getDotColor = {(dataPoint, dataPointIndex) => {
+                                                const lastDataIndex = transDatas.dates.length - 1;
+                                                return dataPointIndex === lastDataIndex ? '#F45959' : '#595959'; // 'red' for the last point, 'blue' for others
                                             }}
-                                            bezier
+                                            renderDotContent={({ x, y, index }) => (
+                                                <View
+                                                style={{
+                                                    height: 24,
+                                                    width: 50, // 텍스트 컨테이너의 너비
+                                                    justifyContent: 'center', // 텍스트를 세로 중앙에 정렬
+                                                    alignItems: 'center', // 텍스트를 가로 중앙에 정렬
+                                                    position: "absolute",
+                                                    top: y - 30, // dot 위에 위치시키기 위해 조정
+                                                    left: x - 25, // 텍스트 컨테이너 너비의 절반만큼 왼쪽으로 이동하여 중앙 정렬
+                                                }}
+                                                >
+                                                <Text style={{ textAlign: 'center', fontSize: 15, fontSize: 16, fontWeight: '500' }}>{transDatas.totalVolumes[index]}</Text>
+
+                                                </View>
+                                            )}
+                                            style={styles.chart}                             
                                         />
                                     </View>
                                 </View>
                             </View>
                             <View style={styles.chartsBox}>
                                 <View style={styles.chartTitleBox}>
-                                    <Text style={styles.chartTitleText}>최고 무게</Text>
+                                    <Text style={styles.chartTitleText}>최고 무게(kg)</Text>
                                 </View>
                                 <View style={styles.chartContentBox}>
                                     {/* 라인 차트 */}
@@ -267,39 +324,45 @@ const ChartScreen = ({ }) => {
                                                 labels: transDatas.dates,
                                                 datasets: [
                                                     {
-                                                        data: transDatas.maxWeights
+                                                        data: transDatas.maxWeights,
+                                                        color: (opacity = 1) => `rgba(89, 89, 89, ${opacity})`,
+                                                        strokeWidth: 5
                                                     }
                                                 ]
                                             }}
                                             width={Dimensions.get("window").width} // from react-native
-                                            height={200}
-                                            yAxisLabel="$"
-                                            yAxisSuffix="k"
-                                            yAxisInterval={1} // optional, defaults to 1
-                                            chartConfig={{
-                                                backgroundColor: "#e26a00",
-                                                backgroundGradientFrom: "#fb8c00",
-                                                backgroundGradientTo: "#ffa726",
-                                                decimalPlaces: 2, // optional, defaults to 2dp
-                                                color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-                                                labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-                                                style: {
-                                                    borderRadius: 16
-                                                },
-                                                propsForDots: {
-                                                    r: "6",
-                                                    strokeWidth: "2",
-                                                    stroke: "#ffa726"
-                                                }
+                                            height={160}  
+                                            yAxisSuffix="kg"
+                                            withHorizontalLabels={false}                                            yAxisInterval={1} // optional, defaults to 1
+                                            chartConfig={chartConfig}    
+                                            withHorizontalLines = {false} 
+                                            getDotColor = {(dataPoint, dataPointIndex) => {
+                                                const lastDataIndex = transDatas.dates.length - 1;
+                                                return dataPointIndex === lastDataIndex ? '#F45959' : '#595959'; // 'red' for the last point, 'blue' for others
                                             }}
-                                            bezier
-                                        />
+                                            renderDotContent={({ x, y, index }) => (
+                                                <View
+                                                style={{
+                                                    height: 24,
+                                                    width: 50, // 텍스트 컨테이너의 너비
+                                                    justifyContent: 'center', // 텍스트를 세로 중앙에 정렬
+                                                    alignItems: 'center', // 텍스트를 가로 중앙에 정렬
+                                                    position: "absolute",
+                                                    top: y - 30, // dot 위에 위치시키기 위해 조정
+                                                    left: x - 25, // 텍스트 컨테이너 너비의 절반만큼 왼쪽으로 이동하여 중앙 정렬
+                                                }}
+                                                >
+                                                <Text style={{ textAlign: 'center', fontSize: 15, fontSize: 16, fontWeight: '500' }}>{transDatas.maxWeights[index]}</Text>
+
+                                                </View>
+                                            )}
+                                            style={styles.chart}                                        />
                                     </View>
                                 </View>
                             </View>
                             <View style={styles.chartsBox}>
                                 <View style={styles.chartTitleBox}>
-                                    <Text style={styles.chartTitleText}>최대 반복 횟수</Text>
+                                    <Text style={styles.chartTitleText}>최대 반복 횟수(회)</Text>
                                 </View>
                                 <View style={styles.chartContentBox}>
                                     {/* 라인 차트 */}
@@ -309,39 +372,45 @@ const ChartScreen = ({ }) => {
                                                 labels: transDatas.dates,
                                                 datasets: [
                                                     {
-                                                        data: transDatas.maxReps
+                                                        data: transDatas.maxReps,
+                                                        color: (opacity = 1) => `rgba(89, 89, 89, ${opacity})`,
+                                                        strokeWidth: 5
                                                     }
                                                 ]
                                             }}
                                             width={Dimensions.get("window").width} // from react-native
-                                            height={200}
-                                            yAxisLabel="$"
-                                            yAxisSuffix="k"
-                                            yAxisInterval={1} // optional, defaults to 1
-                                            chartConfig={{
-                                                backgroundColor: "#e26a00",
-                                                backgroundGradientFrom: "#fb8c00",
-                                                backgroundGradientTo: "#ffa726",
-                                                decimalPlaces: 2, // optional, defaults to 2dp
-                                                color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-                                                labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-                                                style: {
-                                                    borderRadius: 16
-                                                },
-                                                propsForDots: {
-                                                    r: "6",
-                                                    strokeWidth: "2",
-                                                    stroke: "#ffa726"
-                                                }
+                                            height={160}  
+                                            withHorizontalLabels={false}
+                                            yAxisInterval={1} // optional, defaults to 1                                            
+                                            chartConfig={chartConfig}    
+                                            withHorizontalLines = {false} 
+                                            getDotColor = {(dataPoint, dataPointIndex) => {
+                                                const lastDataIndex = transDatas.dates.length - 1;
+                                                return dataPointIndex === lastDataIndex ? '#F45959' : '#595959'; // 'red' for the last point, 'blue' for others
                                             }}
-                                            bezier
-                                        />
+                                            renderDotContent={({ x, y, index }) => (
+                                                <View
+                                                style={{
+                                                    height: 24,
+                                                    width: 50, // 텍스트 컨테이너의 너비
+                                                    justifyContent: 'center', // 텍스트를 세로 중앙에 정렬
+                                                    alignItems: 'center', // 텍스트를 가로 중앙에 정렬
+                                                    position: "absolute",
+                                                    top: y - 30, // dot 위에 위치시키기 위해 조정
+                                                    left: x - 25, // 텍스트 컨테이너 너비의 절반만큼 왼쪽으로 이동하여 중앙 정렬
+                                                }}
+                                                >
+                                                <Text style={{ textAlign: 'center', fontSize: 15, fontSize: 16, fontWeight: '500' }}>{transDatas.maxReps[index]}</Text>
+
+                                                </View>
+                                            )}
+                                            style={styles.chart}                                        />
                                     </View>
                                 </View>
                             </View>
                             <View style={styles.chartsBox}>
                                 <View style={styles.chartTitleBox}>
-                                    <Text style={styles.chartTitleText}>최대 세트 횟수</Text>
+                                    <Text style={styles.chartTitleText}>최대 세트 횟수(Set)</Text>
                                 </View>
                                 <View style={styles.chartContentBox}>
                                     {/* 라인 차트 */}
@@ -351,33 +420,39 @@ const ChartScreen = ({ }) => {
                                                 labels: transDatas.dates,
                                                 datasets: [
                                                     {
-                                                        data: transDatas.maxSetCounts
+                                                        data: transDatas.maxSetCounts,
+                                                        color: (opacity = 1) => `rgba(89, 89, 89, ${opacity})`,
+                                                        strokeWidth: 5
                                                     }
                                                 ]
                                             }}
                                             width={Dimensions.get("window").width} // from react-native
-                                            height={200}
-                                            yAxisLabel="$"
-                                            yAxisSuffix="k"
-                                            yAxisInterval={1} // optional, defaults to 1
-                                            chartConfig={{
-                                                backgroundColor: "#e26a00",
-                                                backgroundGradientFrom: "#fb8c00",
-                                                backgroundGradientTo: "#ffa726",
-                                                decimalPlaces: 2, // optional, defaults to 2dp
-                                                color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-                                                labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-                                                style: {
-                                                    borderRadius: 16
-                                                },
-                                                propsForDots: {
-                                                    r: "6",
-                                                    strokeWidth: "2",
-                                                    stroke: "#ffa726"
-                                                }
+                                            height={160}  
+                                            withHorizontalLabels={false}
+                                            yAxisInterval={1} // optional, defaults to 1                                            
+                                            chartConfig={chartConfig}    
+                                            withHorizontalLines = {false} 
+                                            getDotColor = {(dataPoint, dataPointIndex) => {
+                                                const lastDataIndex = transDatas.dates.length - 1;
+                                                return dataPointIndex === lastDataIndex ? '#F45959' : '#595959'; // 'red' for the last point, 'blue' for others
                                             }}
-                                            bezier
-                                        />
+                                            renderDotContent={({ x, y, index }) => (
+                                                <View
+                                                style={{
+                                                    height: 24,
+                                                    width: 50, // 텍스트 컨테이너의 너비
+                                                    justifyContent: 'center', // 텍스트를 세로 중앙에 정렬
+                                                    alignItems: 'center', // 텍스트를 가로 중앙에 정렬
+                                                    position: "absolute",
+                                                    top: y - 30, // dot 위에 위치시키기 위해 조정
+                                                    left: x - 25, // 텍스트 컨테이너 너비의 절반만큼 왼쪽으로 이동하여 중앙 정렬
+                                                }}
+                                                >
+                                                <Text style={{ textAlign: 'center', fontSize: 15, fontSize: 16, fontWeight: '500' }}>{transDatas.maxSetCounts[index]}</Text>
+
+                                                </View>
+                                            )}
+                                            style={styles.chart}                                        />
                                     </View>
                                 </View>
                             </View>
@@ -394,26 +469,27 @@ const styles = StyleSheet.create({
     ChartScreenContainer: {
         width: '100%',
         height: '100%',
-        backgroundColor: '#E3E3E3'
+        backgroundColor: '#E8E8E8'
     },
     ChartScreenHeader: {
         width: '100%',
-        height: '8%',
-        paddingVertical: 8,
-        paddingHorizontal: 15,
+        height: '10%',
+        paddingTop: 10,
+        paddingBottom: 14,
+        paddingHorizontal: 12,
         backgroundColor: 'white',
         flexDirection: 'row',
-        justifyContent: 'space-between'
+        justifyContent: 'space-between',
+        borderBottomColor: '#DBDBDB',
+        borderBottomWidth: 2.5,
     },
     exerciseDropdown: {
         height: 'auto',
-        width: '100%',
+        width: '55%',
     },
     periodOptions: {
         height: 'auto',
-        width: '100%',
-        paddingVertical: 8,
-        paddingHorizontal: 15,
+        width: '40%',
         flexDirection: 'row',
         alignContent: 'center',
         alignItems: 'center',
@@ -423,8 +499,8 @@ const styles = StyleSheet.create({
         height: 'auto',
         width: 'auto',
         backgroundColor: 'white',
-        paddingTop: 9,
-        paddingBottom: 10,
+        paddingTop: 12,
+        paddingBottom: 13,
         paddingHorizontal: 15,
         borderRadius: 1000,
         flexDirection: 'row',
@@ -440,9 +516,19 @@ const styles = StyleSheet.create({
         elevation: 5,
 
     },
+    periodOptionsIconBox: {
+        height: 'auto',
+        width: 'auto',
+        marginRight: 6,
+    },
+    periodOptionsTextBox: {
+        height: 'auto',
+        width: 'auto',
+        flexDirection: 'row'
+    },
     periodOptionsText: {
         fontSize: 16,
-        fontWeight: 'bold'
+        fontWeight: 'bold',
     },
     dropdown: {
         height: '100%',
@@ -484,7 +570,7 @@ const styles = StyleSheet.create({
     chartsContainer: {
         height: 'auto',
         width: '100%',
-        paddingTop: 10,
+        marginTop: 25,
     },
     chartsBox: {
         height: 'auto',
@@ -494,7 +580,8 @@ const styles = StyleSheet.create({
         height: 'auto',
         width: 'auto',
         paddingHorizontal: 15,
-        paddingVertical: 8,
+        paddingBottom: 2,
+        color: '#0F0F0F'
     },
     chartTitleText: {
         fontSize: 21,
@@ -504,12 +591,23 @@ const styles = StyleSheet.create({
         width: '100%',
         height: 'auto',
         paddingTop: 7,
-        marginBottom: 5,
+        marginBottom: 35,
     },
     chartContent: {
         width: '100%',
-        height: 'auto',
-        overflow: 'hidden',
+        height: 'auto',   
+    },
+    chart: {
+        paddingVertical: 30, 
+        backgroundColor: 'white', 
+        shadowColor: "#000",
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+        elevation: 8,
     }
 })
 
